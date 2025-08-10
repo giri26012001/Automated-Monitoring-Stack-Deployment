@@ -1,0 +1,56 @@
+---
+- hosts: alertmanager
+  become: yes
+  gather_facts: false
+  tasks:
+    - name: install alertmanager
+      get_url:
+        url: "https://github.com/prometheus/alertmanager/releases/download/v{{ alertmanager_version }}/alertmanager-{{ alertmanager_version }}.linux-amd64.tar.gz"
+        dest: /tmp/alertmanager.tar.gz
+        mode: '0644'
+
+    - name: debug alertmanager download
+      debug:
+        msg: "Alertmanager version {{ alertmanager_version }} downloaded successfully."
+
+    - name: extract alertmanager
+      become: yes
+      unarchive:
+        src: /tmp/alertmanager.tar.gz
+        dest: /opt/
+        remote_src: yes
+    
+    - name: debug alertmanager extraction
+      debug:
+        msg: "Alertmanager extracted to /opt/alertmanager-{{ alertmanager_version }}."
+
+    - name: configure alertmanager service
+      copy:
+        dest: /etc/systemd/system/alertmanager.service
+        content: |
+          [Unit]
+          Description=Alertmanager
+          Before=network-online.target
+          After=network-online.target
+          [Service]
+          user=root
+          group=root
+          Type=simple
+          ExecStart=/opt/alertmanager-{{ alertmanager_version }}.linux-amd64/alertmanager --config.file=/opt/alertmanager-{{ alertmanager_version}}.linux-amd64/alertmanager.yml --web.listen-address=:{{ alertmanager_port }}
+          Restart=always
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: debug alertmanager service configuration
+      debug:
+        msg: "Alertmanager service configured to run on port {{ alertmanager_port }}."
+
+    - name: start alertmanager service
+      systemd:
+        name: alertmanager
+        state: started
+        enabled: yes
+
+    - name: debug alertmanager service start
+      debug:
+        msg: "Alertmanager service started successfully."

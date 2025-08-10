@@ -1,0 +1,55 @@
+---
+- hosts: prometheus
+  become: yes
+  gather_facts: false
+  tasks:
+    - name: download prometheus
+      get_url:
+        url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+        dest: /tmp/prometheus.tar.gz
+        mode: '0644'
+
+    - name: debug prometheus download
+      debug:
+        msg: "Prometheus version {{ prometheus_version }} downloaded successfully."
+
+    - name: extract prometheus
+      unarchive:
+        src: /tmp/prometheus.tar.gz
+        dest: /opt/
+        remote_src: yes
+
+    - name: debug prometheus extraction
+      debug:
+        msg: "Prometheus extracted to /opt/prometheus-{{ prometheus_version }}."
+
+    - name: configure prometheus service
+      copy:
+        dest: /etc/systemd/system/prometheus.service
+        content: |
+          [Unit]
+          Description=Prometheus Monitoring
+          wants=network-online.target
+          After=network-online.target
+          [Service]
+          user=root
+          group=root
+          Type=simple
+          ExecStart=/opt/prometheus-{{ prometheus_version }}.linux-amd64/prometheus --config.file=/opt/prometheus-{{ prometheus_version }}.linux-amd64/prometheus.yml --web.listen-address=:{{ prometheus_port }}
+          Restart=always
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: debug prometheus service configuration
+      debug:
+        msg: "Prometheus service configured to run on port {{ prometheus_port }}."
+
+    - name: start prometheus service
+      systemd:
+        name: prometheus
+        state: started
+        enabled: yes
+
+    - name: debug prometheus service start
+      debug:
+        msg: "Prometheus service started successfully."

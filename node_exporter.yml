@@ -1,0 +1,55 @@
+---
+- hosts: node_exporter
+  become: yes
+  gather_facts: false
+  tasks: 
+    - name: install node_exporter
+      get_url:
+        url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+        dest: /tmp/node_exporter.tar.gz
+        mode: '0644'
+
+    - name: debug node_exporter installation
+      debug:
+        msg: "Node Exporter version {{ node_exporter_version }} installed successfully."
+
+    - name: extract node_exporter
+      unarchive:
+        src: /tmp/node_exporter.tar.gz
+        dest: /opt/
+        remote_src: yes
+
+    - name: debug node_exporter extraction
+      debug:
+        msg: "Node Exporter extracted to /opt/node_exporter-{{ node_exporter_version }}."
+
+    - name: configure node_exporter service
+      copy:
+        dest: /etc/systemd/system/node_exporter.service
+        content: |
+          [Unit]
+          Description=Node Exporter
+          Before=network-online.target
+          After=network-online.target
+          [Service]
+          User=root
+          Group=root
+          Type=simple
+          ExecStart=/opt/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter --web.listen-address=:{{ node_exporter_port }}
+          Restart=always
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: debug node_exporter service configuration
+      debug:
+        msg: "Node Exporter service configured to run on port {{ node_exporter_port }}."
+
+    - name: start node_exporter service
+      systemd:
+        name: node_exporter
+        state: started
+        enabled: yes
+
+    - name: debug node_exporter service start
+      debug:
+        msg: "Node Exporter service started successfully."
