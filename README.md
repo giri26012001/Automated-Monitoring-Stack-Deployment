@@ -20,5 +20,5 @@ The below is breakdown of the tasks:
        - --web.listen-address port on which the tool will be accessible.
        - Restart=always ensures tool restarts automatically if it crashes.
 
-    4. Start and enable the service:
-       - Starts the tool immedietly and makes it start if the server is rebooted.
+4. Start and enable the service:
+  - Starts the tool immedietly and makes it start if the server is rebooted.
